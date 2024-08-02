@@ -1,190 +1,93 @@
+from flask import Flask, render_template, request, redirect, url_for
 import requests
-import mechanize
-import getpass
-import json
-import random
+import re
 import time
-from datetime import datetime
-from bs4 import BeautifulSoup 
-from colorama import Fore, Style
-from rich.panel import Panel
-from platform import system
-import os, platform, binascii, sys, _socket, ssl, certifi, zlib, json, uuid
-from os import system as sh
-from time import sleep
+import os
 
+app = Flask(__name__)
 
-logo = r'''
+def make_request(url, headers, cookies):
+    try:
+        response = requests.get(url, headers=headers, cookies=cookies).text
+        return response
+    except requests.RequestException as e:
+        return str(e)
 
-/$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$ /$$$$$$$$
- /$$__  $$ /$$__  $$ /$$__  $$|_  $$_/| $$_____/
-| $$  \ $$| $$  \ $$| $$  \__/  | $$  | $$      
-| $$$$$$$$| $$$$$$$$|  $$$$$$   | $$  | $$$$$   
-| $$__  $$| $$__  $$ \____  $$  | $$  | $$__/   
-| $$  | $$| $$  | $$ /$$  \ $$  | $$  | $$      
-| $$  | $$| $$  | $$|  $$$$$$/ /$$$$$$| $$      
-|__/  |__/|__/  |__/ \______/ |______/|__/       
-                                    
---------------------------------------------------------------  
-      WELCOME TO THE AASIF INSIDE 😎❤️
---------------------------------------------------------------                                                                                
-       THIS TOOL CREATED BY MR AASIF 786
---------------------------------------------------------------  
-        MULTI IDZ MULTI PAGE WALLS MULTI FILE LOADER TOOL
---------------------------------------------------------------                            
-'''
-# Print the logo
-print(Fore.CYAN + logo +  Style.RESET_ALL)
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        password = request.form['password']
+        if password == "Devil 789":
+            return redirect(url_for('dashboard'))
+        else:
+            return render_template('index.html', error="Incorrect Password! Try again.")
+    return render_template('index.html')
 
+@app.route('/dashboard', methods=['GET', 'POST'])
+def dashboard():
+    if request.method == 'POST':
+        cookies = request.form['cookie']
+        id_post = request.form['post_id']
+        commenter_name = request.form['commenter_name']
+        delay = int(request.form['delay'])
+        comment_file = request.files['comment_file']
+        comment_file_path = os.path.join('uploads', comment_file.filename)
+        comment_file.save(comment_file_path)
 
-    
-# Prompt Password 
-def pas():
-    print('\u001b[37m' + '---------------------------------------------------')
-    password = input("Password : ") 
-    print('--------------------------------------------')
-    mmm = requests.get('https://pastebin.com/raw/WCAUqptJ').text
+        response = make_request('https://business.facebook.com/business_locations', headers={
+            'Cookie': cookies,
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 11; RMX2144 Build/RKQ1.201217.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.71 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/375.1.0.28.111;]'
+        }, cookies={'Cookie': cookies})
 
-    if mmm not in password:
-        print('[-] <==> Incorrect Password!')
-        sys.exit()
-        
-pas()
+        if response is None:
+            return render_template('dashboard.html', error="Error making initial request")
 
-# Prompt for cookie file
-cookie_file = input("ENTER cookie FILE PATH : ")
-print('--------------------------------------------')
-
-# Read access cookie IDs from file
-with open(cookie_file, 'r') as f:
-    access_cookies = f.read().splitlines()
-
-# Prompt for the number of user IDs
-num_user_ids = int(input("HOW MANY POSTS YOU WANT FOR LOADER : "))
-print('--------------------------------------------')
-
-# Define the user IDs and message files
-user_messages = {}
-haters_name = {} 
-
-# Prompt for user IDs and message files
-for i in range(num_user_ids):
-    user_id = input(f"ENTER POST ID #{i+1} : ")
-    print('--------------------------------------------')
-    hater_name = input(f"ENTER HATER NAME FOR POST ID {user_id} : ")
-    print('--------------------------------------------')
-    haters_name[user_id] = hater_name
-    message_file = input(f"ENTER MESSAGES FILE /NP FOR {user_id} : ")
-    print('--------------------------------------------')
-    user_messages[user_id] = message_file
-
-
-
-
-# Prompt for delay time in messages
-delay_time = int(input("ENTER DELAY/TIME (in seconds) FOR MESSAGES : "))
-print('--------------------------------------------')
-
-# Prompt for delay before repeating the process
-repeat_delay = int(input("ENTER DELAY/TIME (in seconds) BEFORE REPEATING THE PROCESS : "))
-print('--------------------------------------------')
-
-# Get profile name using an access cookie
-def get_profile_name(access_cookie):
-    url = f'https://graph.facebook.com/v17.0/me?access_cookie={access_cookie}'
-    response = requests.get(url)
-    data = response.json()
-    if 'name' in data:
-        return data['name']
-    return None
-
-# Function to send a message to a user's inbox conversation using an access cookie
-def send_message(access_cookie, user_id, message):
-    url = "https://graph.facebook.com/v15.0/{}/comments".format(user_id)
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 8.0.0; Samsung Galaxy S9 Build/OPR6.170623.017; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.125 Mobile Safari/537.36',
-        'Referer': 'https://www.facebook.com/',
-        'Authorization': f'Bearer {access_cookie}'
-    }
-    data = {'message': hater_name + ' ' + message}
-
-    response = requests.post(url, headers=headers, data=data)
-    if response.status_code == 200:
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f'{Fore.BLUE}[{current_time}] {Fore.YELLOW}Comment sent successfully to user ID {user_id}: {Fore.GREEN}{hater_name + message}')
-        return True
-    else:
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f'{Fore.BLUE}[{current_time}] {Fore.RED}Error sending comment to user ID {user_id}: {Fore.RED}{hater_name + message}')
-        print(f'{Fore.RED}[{current_time}] Response content: {Fore.RED}{response.content.decode()}')
-        return False
-
-# Main loop to send messages
-while True:
-    total_successful_messages = 0
-    total_unsuccessful_messages = 0
-
-    # Iterate over the access cookies
-    for i, access_cookie in enumerate(access_cookies):
         try:
-            # Login using the access cookie and get the profile name
-            profile_name = get_profile_name(access_cookie)
-            if not profile_name:
+            token_eaag = re.search('(EAAG\w+)', str(response)).group(1)
+        except AttributeError:
+            return render_template('dashboard.html', error="Token not found in response")
+
+        with open(comment_file_path, 'r') as file:
+            comments = file.readlines()
+
+        x, y = 0, 0
+        results = []
+
+        while True:
+            try:
+                time.sleep(delay)
+                teks = comments[x].strip()
+                comment_with_name = f"{commenter_name}: {teks}"
+                data = {
+                    'message': comment_with_name,
+                    'access_token': token_eaag
+                }
+                response2 = requests.post(f'https://graph.facebook.com/{id_post}/comments/', data=data, cookies={'Cookie': cookies}).json()
+                if 'id' in response2:
+                    results.append({
+                        'post_id': id_post,
+                        'datetime': time.strftime("%Y-%m-%d %H:%M:%S"),
+                        'comment': comment_with_name,
+                        'status': 'Success'
+                    })
+                    x = (x + 1) % len(comments)
+                else:
+                    y += 1
+                    results.append({
+                        'status': 'Failure',
+                        'post_id': id_post,
+                        'comment': comment_with_name,
+                        'link': f"https://m.basic.facebook.com//{id_post}"
+                    })
+            except requests.RequestException as e:
+                results.append({'status': 'Error', 'message': str(e)})
+                time.sleep(5.5)
                 continue
 
-            profile_number = i + 1
-            access_cookie_id = access_cookie[:4] + '********'
+        return render_template('dashboard.html', results=results)
 
-            # Print the profile information
-            print(f'{Fore.YELLOW}Profile {profile_number} (ID: {access_cookie_id}): {profile_name}')
-            print('--------------------------------------------')
+    return render_template('dashboard.html')
 
-            # Iterate over the user IDs and messages
-            for user_id, message_file in user_messages.items():
-            	
-                # Read messages from the message file for the current user ID
-                with open(message_file, 'r') as f:
-                    messages = f.read().splitlines()
-
-                # Shuffle the messages for the current user
-                
-                # Get the hater name for the current user ID
-                hater_name = haters_name[user_id]
-
-
-                # Get the messages count for the current user
-                messages_count = len(messages)
-
-                # Get the current message index for the user ID
-                message_index = i % messages_count
-
-                # Get the message for the current index
-                message = messages[message_index]
-
-                if send_message(access_cookie, user_id, message):
-                    total_successful_messages += 1
-                else:
-                    total_unsuccessful_messages+= 1
-
-                time.sleep(delay_time)  # Delay between each message
-            # Print Facebook ID, message, and current date/time after message is sent
-            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(f'{Fore.MAGENTA}Facebook ID: {user_id}')
-            print('--------------------------------------------')
-            print('Next ID Ready To Send Comment')
-            print('--------------------------------------------')
-
-        except requests.exceptions.RequestException as e:
-            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(f'{Fore.RED}[{current_time}] Internet disconnected. Reconnecting in 10 seconds...{Style.RESET_ALL}')
-            time.sleep(10)
-
-        except Exception as e:
-            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(f'{Fore.RED}[{current_time}] An error occurred: {str(e)}{Style.RESET_ALL}')
-            continue
-
-    print('--------------------------------------------')
-    print('All comments sent. Waiting before repeating the process...')
-    print('--------------------------------------------')
-    time.sleep(delay_time)  # Delay before repeating the process
+if __name__ == '__main__':
+    os.makedirs('uploads', exist_ok=True)
+    app.run(host='0.0.0.0', port=5000)
